@@ -181,9 +181,12 @@ def doLoop(isPi):
             frame = f.array
             (loop, bg) = processFrame(frame, bgFrame)
             if (not loop):
+                piCapture.truncate(0)
                 break
             elif (bg is not None):
+                piCapture.truncate(0)
                 bgFrame = bg
+            piCapture.truncate(0)
         closeGently(isPi)
     else:
         print "Using CV2's VideoCapture"
