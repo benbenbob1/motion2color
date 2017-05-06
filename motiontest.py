@@ -171,7 +171,7 @@ def doLoop(isPi):
         camera = pc.PiCamera()
         camera.resolution = tuple(VIDEO_FEED_SIZE)
         camera.framerate = FPS
-        piCapture = PiRGBArray(camera, size=camera.resolution)
+        piCapture = PiRGBArray(camera, size=tuple(VIDEO_FEED_SIZE))
         time.sleep(2.5)
         print("Pi video feed opened")
         for f in camera.capture_continuous(
