@@ -10,7 +10,8 @@ piCapture = None
 
 isPi = False
 try:
-    import picamera as pc
+    from picamera import PiCamera as pc
+    from picamera.array import PiRGBArray
     isPi = True
 except ImportError:
     isPi = False
