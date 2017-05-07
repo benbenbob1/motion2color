@@ -34,7 +34,7 @@ def doLoop(isPi):
     DIFF_THRESH = 50 #difference threshold value
     LEARN_APPROVE = 15 #allowed difference between 'identical' frames
     LEARN_TIME = 50 #number of identical frames needed to learn the background
-    FPS = 16
+    FPS = 8
 
     bgFrame = None
 
@@ -105,7 +105,7 @@ def doLoop(isPi):
         if person2Size > MIN_AREA:
             person2Size -= 10000
 
-        if len(contours) > 0:
+        if contours is not None and len(contours) > 0:
             text = "Movement detected"
             for cont in contours:
                 contourArea = cv2.contourArea(cont)
