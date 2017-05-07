@@ -1,6 +1,8 @@
 import datetime
 import time
+import math
 import imutils
+import warnings
 import numpy as np
 # and now the most important of all
 import cv2
@@ -18,6 +20,8 @@ except ImportError:
 
 #METHODS
 
+warnings.simplefilter("ignore")
+
 person1Size = 0
 person2Size = 0
 numFramesIdentical = 0 #increases every nearly identical frame 
@@ -26,8 +30,8 @@ lastFrame = None
 def doLoop(isPi):
     MIN_AREA = 500 #minimum area size, pixels
     VIDEO_FEED_SIZE = [640, 480] #pixels
-    G_BLUR_AMOUNT = 21 #gaussian blur value
-    DIFF_THRESH = 25 #difference threshold value
+    G_BLUR_AMOUNT = 15 #gaussian blur value
+    DIFF_THRESH = 50 #difference threshold value
     LEARN_APPROVE = 15 #allowed difference between 'identical' frames
     LEARN_TIME = 50 #number of identical frames needed to learn the background
     FPS = 16
@@ -35,8 +39,6 @@ def doLoop(isPi):
     bgFrame = None
 
     dilateKernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(15,15))
-
-    
 
     # Returns: 
     # (
@@ -54,43 +56,49 @@ def doLoop(isPi):
         # blur it to reduce noise
         gray = cv2.GaussianBlur(gray, (G_BLUR_AMOUNT, G_BLUR_AMOUNT), 0)
 
-        if numFramesIdentical >= LEARN_TIME or bgFrame is None or lastFrame is None:
+        if (numFramesIdentical >= LEARN_TIME
+            or bgFrame is None
+            or lastFrame is None):
             print "(Re)collecting background frame..."
-            lastFrame = gray.copy().astype("float")
+            lastFrame = gray.copy()
             numFramesIdentical = 0
             return (True, lastFrame)
 
         # accumulate average frame
         #cv2.accumulateWeighted(gray, avgFrame, 0.5)
-        grayDelta = cv2.absdiff(gray, cv2.convertScaleAbs(lastFrame))
-        frameDelta = cv2.absdiff(gray, cv2.convertScaleAbs(bgFrame))
+        grayDelta = cv2.absdiff(gray, lastFrame)
+        frameDelta = cv2.absdiff(gray, bgFrame)
         threshold = cv2.threshold(frameDelta, DIFF_THRESH, 255, 
             cv2.THRESH_BINARY)[1]
 
         lastFrame = gray
 
-        frameDiffAvg = np.uint8(
+        frameDiffMax = np.uint8(
             np.max(
                 np.max(grayDelta, axis=0),
             axis=0)
         )
 
-        if (frameDiffAvg <= LEARN_APPROVE):
+        if (frameDiffMax <= LEARN_APPROVE):
             numFramesIdentical += 1
         else:
             numFramesIdentical = 0
 
-        print "# f: "+str(numFramesIdentical)
-
         # dilate and then close - this fills in gaps
-        threshold = cv2.dilate(threshold, dilateKernel, iterations=4)
+        threshold = cv2.dilate(threshold, dilateKernel, iterations=6)
         threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, dilateKernel)
         try:
-            _, contours, _ = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, 
-                cv2.CHAIN_APPROX_SIMPLE)
+            _, contours, _ = cv2.findContours(
+                threshold.copy(), 
+                cv2.RETR_EXTERNAL, 
+                cv2.CHAIN_APPROX_SIMPLE
+            )
         except: #for pi
-            _, contours = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, 
-                cv2.CHAIN_APPROX_SIMPLE)
+            _, contours = cv2.findContours(
+                threshold.copy(),
+                cv2.RETR_EXTERNAL, 
+                cv2.CHAIN_APPROX_SIMPLE
+            )
 
         if person1Size > MIN_AREA:
             person1Size -= 10000
@@ -111,8 +119,6 @@ def doLoop(isPi):
                 if (person1Size > person2Size):
                     person2Size = person1Size
 
-                #np.average(cont)
-
                 person1Size = contourArea
 
                 text += " ["+str(contourArea)+"]"
@@ -128,8 +134,8 @@ def doLoop(isPi):
 
                     avgColHSV = cv2.cvtColor(avgCols, cv2.COLOR_BGR2HSV)
 
-                    avgColHSV[0][0][1] = 127
-                    avgColHSV[0][0][2] = 255
+                    avgColHSV[0][0][1] = 255 # Saturation
+                    avgColHSV[0][0][2] = 255 # Value
 
                     avgCols = cv2.cvtColor(avgColHSV, cv2.COLOR_HSV2BGR)
 
@@ -143,6 +149,7 @@ def doLoop(isPi):
                         ), 
                         thickness=5)
                 except:
+                    print "Exception drawing box"
                     continue
         else:
             person1Size = 0
@@ -191,7 +198,7 @@ def doLoop(isPi):
                 piCapture.truncate(0)
                 bgFrame = bg
             piCapture.truncate(0)
-        closeGently(isPi)
+        closeGently(isPi, None)
     else:
         print "Using CV2's VideoCapture"
         # get video feed from default camera device
@@ -216,9 +223,9 @@ def doLoop(isPi):
             elif (bg is not None):
                 bgFrame = bg
 
-        closeGently(isPi)
+        closeGently(isPi, camera)
 
-def closeGently(isPi):
+def closeGently(isPi, camera):
     if (not isPi):
         camera.release();
 
