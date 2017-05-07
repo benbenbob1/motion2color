@@ -85,8 +85,12 @@ def doLoop(isPi):
         # dilate and then close - this fills in gaps
         threshold = cv2.dilate(threshold, dilateKernel, iterations=4)
         threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, dilateKernel)
-        _, contours, _ = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, 
-            cv2.CHAIN_APPROX_SIMPLE)
+        try:
+            _, contours, _ = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, 
+                cv2.CHAIN_APPROX_SIMPLE)
+        except: #for pi
+            _, contours = cv2.findContours(threshold.copy(), cv2.RETR_EXTERNAL, 
+                cv2.CHAIN_APPROX_SIMPLE)
 
         if person1Size > MIN_AREA:
             person1Size -= 10000
