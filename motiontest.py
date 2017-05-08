@@ -28,8 +28,8 @@ numFramesIdentical = 0 #increases every nearly identical frame
 lastFrame = None
 
 def doLoop(isPi):
-    MIN_AREA = 500 #minimum area size, pixels
-    VIDEO_FEED_SIZE = [640, 480] #pixels
+    MIN_AREA = 60 #minimum area size, pixels
+    VIDEO_FEED_SIZE = [272, 204] #pixels
     G_BLUR_AMOUNT = 15 #gaussian blur value
     DIFF_THRESH = 50 #difference threshold value
     LEARN_APPROVE = 15 #allowed difference between 'identical' frames
@@ -38,7 +38,7 @@ def doLoop(isPi):
 
     bgFrame = None
 
-    dilateKernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(15,15))
+    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(40,50))
 
     # Returns: 
     # (
@@ -85,7 +85,7 @@ def doLoop(isPi):
             numFramesIdentical = 0
 
         # dilate and then close - this fills in gaps
-        threshold = cv2.dilate(threshold, dilateKernel, iterations=6)
+        threshold = cv2.dilate(threshold, dilateKernel, iterations=1)
         threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, dilateKernel)
         try:
             _, contours, _ = cv2.findContours(
