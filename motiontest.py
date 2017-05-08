@@ -1,6 +1,5 @@
 import datetime
 import time
-import math
 import imutils
 import warnings
 import numpy as np
@@ -28,9 +27,9 @@ numFramesIdentical = 0 #increases every nearly identical frame
 lastFrame = None
 
 def doLoop(isPi):
-    MIN_AREA = 60 #minimum area size, pixels
-    VIDEO_FEED_SIZE = [272, 204] #pixels
-    G_BLUR_AMOUNT = 11 #gaussian blur value
+    MIN_AREA = 40 #minimum area size, pixels
+    VIDEO_FEED_SIZE = [272, 204] #[width, height] in pixels
+    G_BLUR_AMOUNT = 13 #gaussian blur value
     DIFF_THRESH = 50 #difference threshold value
     LEARN_APPROVE = 15 #allowed difference between 'identical' frames
     LEARN_TIME = 50 #number of identical frames needed to learn the background
@@ -38,7 +37,8 @@ def doLoop(isPi):
 
     bgFrame = None
 
-    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(40,50))
+    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(30,40))
+    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(20,30))
 
     # Returns: 
     # (
@@ -86,7 +86,7 @@ def doLoop(isPi):
 
         # dilate and then close - this fills in gaps
         threshold = cv2.dilate(threshold, dilateKernel, iterations=1)
-        threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, dilateKernel)
+        threshold = cv2.morphologyEx(threshold, cv2.MORPH_CLOSE, closeKernel)
         try:
             _, contours, _ = cv2.findContours(
                 threshold.copy(), 
@@ -104,6 +104,9 @@ def doLoop(isPi):
             person1Size -= 10000
         if person2Size > MIN_AREA:
             person2Size -= 10000
+
+        justMovement = np.float16(cv2.bitwise_and(frame, frame, mask=threshold))
+        justMovement[justMovement == 0] = np.nan
 
         if contours is not None and len(contours) > 0:
             text = "Movement detected"
@@ -123,34 +126,39 @@ def doLoop(isPi):
 
                 text += " ["+str(contourArea)+"]"
                 (x,y,w,h) = cv2.boundingRect(cont)
-                
-                matrixRect = frame[x:(x+w), y:(y+h)]
-                try:
-                    avgCols = np.uint8([[
-                        np.average(
-                            np.average(matrixRect, axis=0),
-                        axis=0)
-                    ]])
-
-                    avgColHSV = cv2.cvtColor(avgCols, cv2.COLOR_BGR2HSV)
-
-                    avgColHSV[0][0][1] = 255 # Saturation
-                    avgColHSV[0][0][2] = 255 # Value
-
-                    avgCols = cv2.cvtColor(avgColHSV, cv2.COLOR_HSV2BGR)
-
-                    cv2.rectangle(
-                        frame, 
-                        (x,y), (x+w, y+h), 
-                        (
-                            int(avgCols[0][0][0]),
-                            int(avgCols[0][0][1]),
-                            int(avgCols[0][0][2])
-                        ), 
-                        thickness=5)
-                except:
-                    print "Exception drawing box"
+            
+                matrixRect = justMovement[x:(x+w), y:(y+h)]
+                #try:
+                mean = np.nanmean(
+                    np.nanmean(matrixRect, axis=0),
+                axis=0)
+                if np.isnan(mean).all():
                     continue
+
+                avgCols = np.uint8([[
+                    mean
+                ]])
+
+                avgColHSV = cv2.cvtColor(avgCols, cv2.COLOR_BGR2HSV)
+
+                avgColHSV[0][0][1] = 255 # Saturation
+                avgColHSV[0][0][2] = 255 # Value
+
+                avgCols = cv2.cvtColor(avgColHSV, cv2.COLOR_HSV2BGR)
+
+                cv2.rectangle(
+                    frame, 
+                    (x,y), (x+w, y+h), 
+                    (
+                        int(avgCols[0][0][0]),
+                        int(avgCols[0][0][1]),
+                        int(avgCols[0][0][2])
+                    ), 
+                    thickness=4)
+                #except:
+                #    print "Exception drawing box"
+                #    print "X: "+str(x)+" Y: "+str(y)+" X+W: "+str(x+w)+" Y+H: "+str(y+h)
+                #    continue
         else:
             person1Size = 0
             person2Size = 0
@@ -166,6 +174,7 @@ def doLoop(isPi):
             0.5, (255,255,255), 1)
 
         cv2.imshow("Feed", frame)
+        cv2.imshow("Movement", np.uint8(justMovement))
         #cv2.imshow("Background", bgFrame)
         #cv2.imshow("Threshold", threshold)
         #cv2.imshow("Delta", frameDelta)
