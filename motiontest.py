@@ -30,11 +30,11 @@ lastFrame = None
 def doLoop(isPi):
     MIN_AREA = 60 #minimum area size, pixels
     VIDEO_FEED_SIZE = [272, 204] #pixels
-    G_BLUR_AMOUNT = 15 #gaussian blur value
+    G_BLUR_AMOUNT = 11 #gaussian blur value
     DIFF_THRESH = 50 #difference threshold value
     LEARN_APPROVE = 15 #allowed difference between 'identical' frames
     LEARN_TIME = 50 #number of identical frames needed to learn the background
-    FPS = 8
+    FPS = 6
 
     bgFrame = None
 
