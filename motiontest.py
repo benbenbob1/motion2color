@@ -166,9 +166,9 @@ def doLoop(isPi):
             0.5, (255,255,255), 1)
 
         cv2.imshow("Feed", frame)
-        cv2.imshow("Background", bgFrame)
-        cv2.imshow("Threshold", threshold)
-        cv2.imshow("Delta", frameDelta)
+        #cv2.imshow("Background", bgFrame)
+        #cv2.imshow("Threshold", threshold)
+        #cv2.imshow("Delta", frameDelta)
 
         # exit on 'q' key press
         key = cv2.waitKey(1) & 0xFF
