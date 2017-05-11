@@ -49,7 +49,7 @@ def sendLEDs(arr):
     ledopc.put_pixels(arr, channel=0)
 
 def doLoop(isPi):
-    MIN_AREA = 40 #minimum area size, pixels
+    MIN_AREA = 30 #minimum area size, pixels
     VIDEO_FEED_SIZE = [272, 204] #[width, height] in pixels
     G_BLUR_AMOUNT = 13 #gaussian blur value
     DIFF_THRESH = 50 #difference threshold value
