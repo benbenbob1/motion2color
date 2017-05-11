@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 # and now the most important of all
 import cv2
+import opc
 
 camera = None
 piCapture = None
@@ -26,6 +27,27 @@ person2Size = 0
 numFramesIdentical = 0 #increases every nearly identical frame 
 lastFrame = None
 
+ledsPerStrip = 30
+ledopc = opc.Client('rpi.student.rit.edu:7890')
+if ledopc.can_connect():
+    print('connected to LED')
+
+#[[r,g,b], [r,g,b], ...]
+def sendLEDs(arr):
+    global ledopc
+    #print arr
+    '''
+    dest = 4
+    packet = [0] * (len(arr) * 3 + 4)
+    for l in range(len(arr)):
+        packet[dest] = min(max(arr[l][0], 255), 0)
+        packet[dest+1] = min(max(arr[l][1], 255), 0)
+        packet[dest+2] = min(max(arr[l][2], 255), 0)
+        dest += 3
+    ledsock.send(packet)
+    '''
+    ledopc.put_pixels(arr, channel=0)
+
 def doLoop(isPi):
     MIN_AREA = 40 #minimum area size, pixels
     VIDEO_FEED_SIZE = [272, 204] #[width, height] in pixels
@@ -37,8 +59,8 @@ def doLoop(isPi):
 
     bgFrame = None
 
-    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(30,40))
-    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(20,30))
+    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
+    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
 
     # Returns: 
     # (
@@ -108,6 +130,8 @@ def doLoop(isPi):
         justMovement = np.float16(cv2.bitwise_and(frame, frame, mask=threshold))
         justMovement[justMovement == 0] = np.nan
 
+        leds = np.uint8([[0,0,0]] * ledsPerStrip)
+
         if contours is not None and len(contours) > 0:
             text = "Movement detected"
             for cont in contours:
@@ -159,6 +183,21 @@ def doLoop(isPi):
                 #    print "Exception drawing box"
                 #    print "X: "+str(x)+" Y: "+str(y)+" X+W: "+str(x+w)+" Y+H: "+str(y+h)
                 #    continue
+
+                ledStartIdx = (x * ledsPerStrip) / VIDEO_FEED_SIZE[0]
+                ledEndIdx = ((x+w) * ledsPerStrip) / VIDEO_FEED_SIZE[0]
+                #print str(ledStartIdx)+" : "+str(ledEndIdx)
+                leds[ledStartIdx:ledEndIdx] += [
+                    int(avgCols[0][0][2]),
+                    int(avgCols[0][0][1]),
+                    int(avgCols[0][0][0])
+                ]
+                '''
+                for l in range(ledStartIdx, ledStartIdx+ledBarWidth):
+                    leds[l][0] = leds[l][0] + avgCols[0][0][0]
+                    leds[l][1] = leds[l][1] + avgCols[0][0][1]
+                    leds[l][2] = leds[l][2] + avgCols[0][0][2]
+                '''
         else:
             person1Size = 0
             person2Size = 0
@@ -175,6 +214,7 @@ def doLoop(isPi):
 
         cv2.imshow("Feed", frame)
         cv2.imshow("Movement", np.uint8(justMovement))
+        sendLEDs(leds)
         #cv2.imshow("Background", bgFrame)
         #cv2.imshow("Threshold", threshold)
         #cv2.imshow("Delta", frameDelta)
