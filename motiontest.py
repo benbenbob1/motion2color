@@ -59,8 +59,8 @@ def doLoop(isPi):
 
     bgFrame = None
 
-    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
-    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
+    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5,10))
+    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5,5))
 
     # Returns: 
     # (
@@ -151,7 +151,10 @@ def doLoop(isPi):
                 text += " ["+str(contourArea)+"]"
                 (x,y,w,h) = cv2.boundingRect(cont)
             
-                matrixRect = justMovement[x:(x+w), y:(y+h)]
+                matrixRect = justMovement[
+                    x:max((x+w), VIDEO_FEED_SIZE[0]),
+                    y:max((y+h), VIDEO_FEED_SIZE[1])
+                ]
                 #try:
                 mean = np.nanmean(
                     np.nanmean(matrixRect, axis=0),
