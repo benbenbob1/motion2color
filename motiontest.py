@@ -35,22 +35,12 @@ if ledopc.can_connect():
 #[[r,g,b], [r,g,b], ...]
 def sendLEDs(arr):
     global ledopc
-    #print arr
-    '''
-    dest = 4
-    packet = [0] * (len(arr) * 3 + 4)
-    for l in range(len(arr)):
-        packet[dest] = min(max(arr[l][0], 255), 0)
-        packet[dest+1] = min(max(arr[l][1], 255), 0)
-        packet[dest+2] = min(max(arr[l][2], 255), 0)
-        dest += 3
-    ledsock.send(packet)
-    '''
     ledopc.put_pixels(arr, channel=0)
 
 def doLoop(isPi):
-    MIN_AREA = 30 #minimum area size, pixels
     VIDEO_FEED_SIZE = [272, 204] #[width, height] in pixels
+    #VIDEO_FEED_SIZE = [640, 360] #[width, height] in pixels
+    MIN_AREA = VIDEO_FEED_SIZE[0]/10 #minimum area size, pixels
     G_BLUR_AMOUNT = 13 #gaussian blur value
     DIFF_THRESH = 50 #difference threshold value
     LEARN_APPROVE = 15 #allowed difference between 'identical' frames
@@ -59,8 +49,8 @@ def doLoop(isPi):
 
     bgFrame = None
 
-    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5,10))
-    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(5,5))
+    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(20,30))
+    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(20,30))
 
     # Returns: 
     # (
@@ -72,7 +62,9 @@ def doLoop(isPi):
 
         text = "No movement"
         # resize frame
-        frame = imutils.resize(frame, width=VIDEO_FEED_SIZE[0])
+        frame = imutils.resize(frame, 
+            width=VIDEO_FEED_SIZE[0]
+        )
         # convert it to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # blur it to reduce noise
@@ -147,24 +139,26 @@ def doLoop(isPi):
                     person2Size = person1Size
 
                 person1Size = contourArea
+                
 
                 text += " ["+str(contourArea)+"]"
-                (x,y,w,h) = cv2.boundingRect(cont)
+                (x1,y1,w,h) = cv2.boundingRect(cont)
+                x2 = min((x1+w), VIDEO_FEED_SIZE[0])
+                y2 = min((y1+h), VIDEO_FEED_SIZE[1])
             
                 matrixRect = justMovement[
-                    x:max((x+w), VIDEO_FEED_SIZE[0]),
-                    y:max((y+h), VIDEO_FEED_SIZE[1])
+                    y1:y2,
+                    x1:x2
                 ]
-                #try:
+                matrixRect[matrixRect == np.inf] = np.nan
+
                 mean = np.nanmean(
                     np.nanmean(matrixRect, axis=0),
                 axis=0)
-                if np.isnan(mean).all():
+                if np.isnan(mean).any():
                     continue
 
-                avgCols = np.uint8([[
-                    mean
-                ]])
+                avgCols = np.uint8([[mean]])
 
                 avgColHSV = cv2.cvtColor(avgCols, cv2.COLOR_BGR2HSV)
 
@@ -175,7 +169,7 @@ def doLoop(isPi):
 
                 cv2.rectangle(
                     frame, 
-                    (x,y), (x+w, y+h), 
+                    (x1,y1), (x2, y2), 
                     (
                         int(avgCols[0][0][0]),
                         int(avgCols[0][0][1]),
@@ -187,8 +181,8 @@ def doLoop(isPi):
                 #    print "X: "+str(x)+" Y: "+str(y)+" X+W: "+str(x+w)+" Y+H: "+str(y+h)
                 #    continue
 
-                ledStartIdx = (x * ledsPerStrip) / VIDEO_FEED_SIZE[0]
-                ledEndIdx = ((x+w) * ledsPerStrip) / VIDEO_FEED_SIZE[0]
+                ledStartIdx = (x1 * ledsPerStrip) / VIDEO_FEED_SIZE[0]
+                ledEndIdx = (x2 * ledsPerStrip) / VIDEO_FEED_SIZE[0]
                 #print str(ledStartIdx)+" : "+str(ledEndIdx)
                 leds[ledStartIdx:ledEndIdx] += [
                     int(avgCols[0][0][2]),
@@ -279,7 +273,7 @@ def doLoop(isPi):
 
 def closeGently(isPi, camera):
     if (not isPi):
-        camera.release();
+        camera.release()
 
     print("Video feed closed")
     cv2.destroyAllWindows()
