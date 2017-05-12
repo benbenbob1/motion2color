@@ -13,3 +13,7 @@ Gets the color of any movement using OpenCV
 
 * On Raspbian: 
     `sudo apt-get install python-opencv`
+
+### SPIDev
+    Must be installed if using APA102 LEDs
+    `pip install spidev`

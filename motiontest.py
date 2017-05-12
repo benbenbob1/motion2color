@@ -5,7 +5,6 @@ import warnings
 import numpy as np
 # and now the most important of all
 import cv2
-import opc
 
 camera = None
 piCapture = None
@@ -18,6 +17,14 @@ try:
 except ImportError:
     isPi = False
 
+opcLED = True
+ledController = None
+
+if opcLED:
+    import opc
+else:
+    import apa102
+
 #METHODS
 
 warnings.simplefilter("ignore")
@@ -26,16 +33,20 @@ person1Size = 0
 person2Size = 0
 numFramesIdentical = 0 #increases every nearly identical frame 
 lastFrame = None
+numLeds = 0
 
-ledsPerStrip = 30
-ledopc = opc.Client('rpi.student.rit.edu:7890')
-if ledopc.can_connect():
-    print('connected to LED')
 
 #[[r,g,b], [r,g,b], ...]
 def sendLEDs(arr):
-    global ledopc
-    ledopc.put_pixels(arr, channel=0)
+    global ledController
+    if opcLED:
+        ledController.put_pixels(arr, channel=0)
+    else:
+        strip2Idx = numLeds+1
+        for i in range(numLeds):
+            ledController.setPixel(i, arr[i][0], arr[i][1], arr[i][2])
+            ledController.setPixel(strip2Idx+i, arr[i][0], arr[i][1], arr[i][2])
+        ledController.show()
 
 def doLoop(isPi):
     VIDEO_FEED_SIZE = [272, 204] #[width, height] in pixels
@@ -122,7 +133,7 @@ def doLoop(isPi):
         justMovement = np.float16(cv2.bitwise_and(frame, frame, mask=threshold))
         justMovement[justMovement == 0] = np.nan
 
-        leds = np.uint8([[0,0,0]] * ledsPerStrip)
+        leds = np.uint8([[0,0,0]] * numLeds)
 
         if contours is not None and len(contours) > 0:
             text = "Movement detected"
@@ -181,20 +192,15 @@ def doLoop(isPi):
                 #    print "X: "+str(x)+" Y: "+str(y)+" X+W: "+str(x+w)+" Y+H: "+str(y+h)
                 #    continue
 
-                ledStartIdx = (x1 * ledsPerStrip) / VIDEO_FEED_SIZE[0]
-                ledEndIdx = (x2 * ledsPerStrip) / VIDEO_FEED_SIZE[0]
+                ledStartIdx = (x1 * numLeds) / VIDEO_FEED_SIZE[0]
+                ledEndIdx = (x2 * numLeds) / VIDEO_FEED_SIZE[0]
                 #print str(ledStartIdx)+" : "+str(ledEndIdx)
                 leds[ledStartIdx:ledEndIdx] += [
                     int(avgCols[0][0][2]),
                     int(avgCols[0][0][1]),
                     int(avgCols[0][0][0])
                 ]
-                '''
-                for l in range(ledStartIdx, ledStartIdx+ledBarWidth):
-                    leds[l][0] = leds[l][0] + avgCols[0][0][0]
-                    leds[l][1] = leds[l][1] + avgCols[0][0][1]
-                    leds[l][2] = leds[l][2] + avgCols[0][0][2]
-                '''
+
         else:
             person1Size = 0
             person2Size = 0
@@ -287,5 +293,13 @@ def closeGently(isPi, camera):
 
 
 print("Attaching to camera...")
+if opcLED:
+    numLeds = 30
+    ledController = opc.Client('rpi.student.rit.edu:7890')
+    if ledController.can_connect():
+        print('Connected to LED OPC')
+else:
+    numLeds = 180 # 180 * 2 strips
+    ledController = apa102.APA102(numLeds, 31)
 
 doLoop(isPi)
