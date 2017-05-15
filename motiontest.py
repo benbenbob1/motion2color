@@ -57,7 +57,7 @@ def sendLEDs(arr):
                 arr[i][0], arr[i][1], arr[i][2]
             )
             ledController.setPixel(
-                (numLeds*2)-i-1, 
+                numLeds+i, 
                 arr[i][0], arr[i][1], arr[i][2]
             )
         ledController.show()
