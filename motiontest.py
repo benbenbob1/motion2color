@@ -90,10 +90,21 @@ def doLoop(isPi):
         if (numFramesIdentical >= LEARN_TIME
             or bgFrame is None
             or lastFrame is None):
-            print "(Re)collecting background frame..."
-            lastFrame = gray.copy()
-            numFramesIdentical = 0
-            return (True, lastFrame)
+            shouldUpdate = True
+            if (lastFrame is not None and bgFrame is not None):
+                bgDelta = cv2.absdiff(bgFrame, lastFrame)
+                frameDiffMax = np.uint8(
+                    np.max(
+                        np.max(bgDelta, axis=0),
+                    axis=0)
+                )
+                if (frameDiffMax <= LEARN_APPROVE):
+                    shouldUpdate = False
+            if shouldUpdate:
+                print "(Re)collecting background frame..."
+                lastFrame = gray.copy()
+                numFramesIdentical = 0
+                return (True, lastFrame)
 
         # accumulate average frame
         #cv2.accumulateWeighted(gray, avgFrame, 0.5)
