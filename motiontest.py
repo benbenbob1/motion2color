@@ -60,8 +60,8 @@ def doLoop(isPi):
 
     bgFrame = None
 
-    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(20,30))
-    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(20,30))
+    dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
+    closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
 
     # Returns: 
     # (
