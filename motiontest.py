@@ -6,8 +6,17 @@ import numpy as np
 # and now the most important of all
 import cv2
 
+VIDEO_FEED_SIZE = [272, 204] #[width, height] in pixels
+MIN_AREA = (VIDEO_FEED_SIZE[0]*VIDEO_FEED_SIZE[1])/25 #minimum area size, pixels
+G_BLUR_AMOUNT = 13 #gaussian blur value
+DIFF_THRESH = 50 #difference threshold value
+LEARN_APPROVE = 15 #allowed difference between 'identical' frames
+LEARN_TIME = 50 #number of identical frames needed to learn the background
+FPS = 6
+
 camera = None
 piCapture = None
+useDisplay = True
 
 isPi = False
 try:
@@ -54,15 +63,6 @@ def sendLEDs(arr):
         ledController.show()
 
 def doLoop(isPi):
-    VIDEO_FEED_SIZE = [272, 204] #[width, height] in pixels
-    #VIDEO_FEED_SIZE = [640, 360] #[width, height] in pixels
-    MIN_AREA = VIDEO_FEED_SIZE[0]/10 #minimum area size, pixels
-    G_BLUR_AMOUNT = 13 #gaussian blur value
-    DIFF_THRESH = 50 #difference threshold value
-    LEARN_APPROVE = 15 #allowed difference between 'identical' frames
-    LEARN_TIME = 50 #number of identical frames needed to learn the background
-    FPS = 6
-
     bgFrame = None
 
     dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
@@ -231,20 +231,21 @@ def doLoop(isPi):
             0.5, (255,255,255), 1)
         cv2.putText(frame, "Press q to quit", (10, 40), cv2.FONT_HERSHEY_PLAIN, 
             0.5, (255,255,255), 1)
-
-        cv2.imshow("Feed", frame)
-        cv2.imshow("Movement", np.uint8(justMovement))
-        
-        #cv2.imshow("Background", bgFrame)
-        #cv2.imshow("Threshold", threshold)
-        #cv2.imshow("Delta", frameDelta)
-
-        # exit on 'q' key press
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            return (False, None)
-
         '''
+
+        if useDisplay:
+            cv2.imshow("Feed", frame)
+            cv2.imshow("Movement", np.uint8(justMovement))
+        
+            #cv2.imshow("Background", bgFrame)
+            #cv2.imshow("Threshold", threshold)
+            #cv2.imshow("Delta", frameDelta)
+
+            # exit on 'q' key press
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):
+                return (False, None)
+
         sendLEDs(leds.tolist())
 
         return (True, None)
