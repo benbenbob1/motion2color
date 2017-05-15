@@ -44,8 +44,8 @@ def sendLEDs(arr):
     else:
         strip2Idx = numLeds+1
         for i in range(numLeds):
-            ledController.setPixel(i, int(arr[i][0]), int(arr[i][1]), int(arr[i][2]))
-            ledController.setPixel(strip2Idx+i, int(arr[i][0]), int(arr[i][1]), int(arr[i][2]))
+            ledController.setPixel(numLeds-i, int(arr[i][0]), int(arr[i][1]), int(arr[i][2]))
+            ledController.setPixel((numLeds*2)-(strip2Idx+i), int(arr[i][0]), int(arr[i][1]), int(arr[i][2]))
         ledController.show()
 
 def doLoop(isPi):
