@@ -44,8 +44,14 @@ def sendLEDs(arr):
     else:
         strip2Idx = numLeds+1
         for i in range(numLeds):
-            ledController.setPixel(numLeds-i, int(arr[i][0]), int(arr[i][1]), int(arr[i][2]))
-            ledController.setPixel((numLeds*2)-(strip2Idx+i), int(arr[i][0]), int(arr[i][1]), int(arr[i][2]))
+            ledController.setPixel(
+                numLeds-i, 
+                arr[i][0], arr[i][1], arr[i][2]
+            )
+            ledController.setPixel(
+                (numLeds*2)-(strip2Idx+i), 
+                arr[i][0], arr[i][1], arr[i][2]
+            )
         ledController.show()
 
 def doLoop(isPi):
@@ -207,6 +213,7 @@ def doLoop(isPi):
 
         dateTimeStr = datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p")
 
+        '''
         # putText(frame,text,origin,font_face,font_scale,color,thickness)
         cv2.putText(frame, text, (10, 20), cv2.FONT_HERSHEY_PLAIN, 
             0.5, (255,0,0), 1)
@@ -217,7 +224,7 @@ def doLoop(isPi):
 
         cv2.imshow("Feed", frame)
         cv2.imshow("Movement", np.uint8(justMovement))
-        sendLEDs(leds)
+        
         #cv2.imshow("Background", bgFrame)
         #cv2.imshow("Threshold", threshold)
         #cv2.imshow("Delta", frameDelta)
@@ -226,6 +233,9 @@ def doLoop(isPi):
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             return (False, None)
+
+        '''
+        sendLEDs(leds.tolist())
 
         return (True, None)
 
@@ -300,6 +310,6 @@ if opcLED:
         print('Connected to LED OPC')
 else:
     numLeds = 180 # 180 * 2 strips
-    ledController = apa102.APA102(numLeds, 31)
+    ledController = apa102.APA102(numLeds*2, 31)
 
 doLoop(isPi)
