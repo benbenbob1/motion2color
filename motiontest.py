@@ -42,14 +42,13 @@ def sendLEDs(arr):
     if opcLED:
         ledController.put_pixels(arr, channel=0)
     else:
-        strip2Idx = numLeds+1
         for i in range(numLeds):
             ledController.setPixel(
                 numLeds-i, 
                 arr[i][0], arr[i][1], arr[i][2]
             )
             ledController.setPixel(
-                (numLeds*2)-(strip2Idx+i), 
+                (numLeds*2)-i-1, 
                 arr[i][0], arr[i][1], arr[i][2]
             )
         ledController.show()
