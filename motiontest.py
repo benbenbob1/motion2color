@@ -14,6 +14,10 @@ LEARN_APPROVE = 15 #allowed difference between 'identical' frames
 LEARN_TIME = 50 #number of identical frames needed to learn the background
 FPS = 6
 
+COLOR_SPREAD = 5 # number of margin leds before + after the colorbar to light up
+FADE_AMT_PER_FRAME = 0.1 * 255 # amount to fade between every frame
+
+
 camera = None
 piCapture = None
 useDisplay = True
@@ -26,7 +30,7 @@ try:
 except ImportError:
     isPi = False
 
-opcLED = False
+opcLED = True
 ledController = None
 
 if opcLED:
@@ -44,29 +48,34 @@ numFramesIdentical = 0 #increases every nearly identical frame
 lastFrame = None
 numLeds = 0
 
+leds = None
 
 #[[r,g,b], [r,g,b], ...]
 def sendLEDs(arr):
+    normalized = np.fmin(np.fmax(arr, 0), 255)
     global ledController
     if opcLED:
-        ledController.put_pixels(arr, channel=0)
+        ledController.put_pixels(normalized, channel=0)
     else:
         for i in range(numLeds):
             ledController.setPixel(
                 numLeds-i, 
-                arr[i][0], arr[i][1], arr[i][2]
+                normalized[i][0], normalized[i][1], normalized[i][2]
             )
             ledController.setPixel(
                 numLeds+i, 
-                arr[i][0], arr[i][1], arr[i][2]
+                normalized[i][0], normalized[i][1], normalized[i][2]
             )
         ledController.show()
 
 def doLoop(isPi):
+    global leds
     bgFrame = None
 
     dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
     closeKernel = cv2.getStructuringElement(cv2.MORPH_RECT,(10,15))
+
+    leds = np.uint8([[0,0,0]] * numLeds)
 
     # Returns: 
     # (
@@ -74,7 +83,9 @@ def doLoop(isPi):
     #   matrix?: background frame or None
     # )
     def processFrame(frame, bgFrame):
-        global person1Size, person2Size, numFramesIdentical, lastFrame
+        global person1Size, person2Size, numFramesIdentical, lastFrame, leds
+
+        leds = np.fmin(np.fmax(np.subtract(leds,FADE_AMT_PER_FRAME), 0), 255);
 
         text = "No movement"
         # resize frame
@@ -149,7 +160,8 @@ def doLoop(isPi):
         justMovement = np.float16(cv2.bitwise_and(frame, frame, mask=threshold))
         justMovement[justMovement == 0] = np.nan
 
-        leds = np.uint8([[0,0,0]] * numLeds)
+        #TODO
+        #leds = np.uint8([[0,0,0]] * numLeds)
 
         if contours is not None and len(contours) > 0:
             text = "Movement detected"
@@ -211,12 +223,43 @@ def doLoop(isPi):
                 ledStartIdx = (x1 * numLeds) / VIDEO_FEED_SIZE[0]
                 ledEndIdx = (x2 * numLeds) / VIDEO_FEED_SIZE[0]
                 #print str(ledStartIdx)+" : "+str(ledEndIdx)
+                for l in range(1,COLOR_SPREAD):
+                    colorAmt = 255 - (l / COLOR_SPREAD) * 255
+                    col = [
+                        int(avgCols[0][0][2] - colorAmt),
+                        int(avgCols[0][0][1] - colorAmt),
+                        int(avgCols[0][0][0] - colorAmt)
+                    ]
+                    thisEnd = min(ledEndIdx+l, numLeds-1)
+                    thisStart = max(ledStartIdx-l, 0)
+                    leds[thisEnd] += col
+                    leds[thisStart] += col
+                
                 leds[ledStartIdx:ledEndIdx] += [
                     int(avgCols[0][0][2]),
                     int(avgCols[0][0][1]),
                     int(avgCols[0][0][0])
                 ]
 
+        circleMargin = 5
+        circleRadius = 1
+        circleXStart = int(
+            (VIDEO_FEED_SIZE[0] / 2.0) - 
+            ( (numLeds / 2.0) * (circleMargin + circleRadius) )
+        )
+        circleY = int(VIDEO_FEED_SIZE[1] / 2.0)
+        for c in range(0,numLeds):
+            cv2.circle(
+                frame,
+                (circleXStart, circleY),
+                circleRadius,
+                (
+                    int(leds[c][2]),
+                    int(leds[c][1]),
+                    int(leds[c][0])
+                )
+            )
+            circleXStart += circleMargin + circleRadius
         else:
             person1Size = 0
             person2Size = 0
